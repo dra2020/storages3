@@ -211,7 +211,7 @@ export class S3StorageManager extends Storage.StorageManager
       });
   }
 
-  ls(blob: Storage.StorageBlob): void
+  ls(blob: Storage.StorageBlob, continuationToken: string): void
   {
     if (blob.id == '')
     {
@@ -222,10 +222,10 @@ export class S3StorageManager extends Storage.StorageManager
 
     Log.event(`S3: ls start`);
 
-    let trace = new Log.AsyncTimer('S3: del');
+    let trace = new Log.AsyncTimer('S3: ls');
     let params: any = { Bucket: this.blobBucket(blob) };
-    if (blob.continuationToken())
-      params.ContinuationToken = blob.continuationToken();
+    if (continuationToken)
+      params.ContinuationToken = continuationToken;
     let rq = new S3Request(blob);
     this.lsBlobIndex[id] = rq;
     blob.setListing();

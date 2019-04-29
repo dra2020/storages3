@@ -1,6 +1,6 @@
 {
   "name": "@terrencecrowley/storages3",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Implementation of storage abstraction against AWS S3.",
   "main": "dist/storages3.js",
   "types": "./dist/all.d.ts",
@@ -34,7 +34,7 @@
   "dependencies": {
     "@terrencecrowley/context": "^1.0.3",
     "@terrencecrowley/log": "^1.0.3",
-    "@terrencecrowley/storage": "^1.0.4",
+    "@terrencecrowley/storage": "^1.0.6",
     "@terrencecrowley/util": "^1.0.14",
     "aws-sdk": "^2.443.0"
   }

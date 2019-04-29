@@ -277,17 +277,17 @@ class S3StorageManager extends Storage.StorageManager {
             Log.event(`S3: del done`);
         });
     }
-    ls(blob) {
+    ls(blob, continuationToken) {
         if (blob.id == '') {
             Log.error('S3: blob ls called with empty key');
             return;
         }
         let id = `ls+${blob.id}+${this.count++}`;
         Log.event(`S3: ls start`);
-        let trace = new Log.AsyncTimer('S3: del');
+        let trace = new Log.AsyncTimer('S3: ls');
         let params = { Bucket: this.blobBucket(blob) };
-        if (blob.continuationToken())
-            params['ContinuationToken'] = blob.continuationToken();
+        if (continuationToken)
+            params.ContinuationToken = continuationToken;
         let rq = new S3Request(blob);
         this.lsBlobIndex[id] = rq;
         blob.setListing();
