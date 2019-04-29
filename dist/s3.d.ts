@@ -7,4 +7,5 @@ export declare class S3StorageManager extends Storage.StorageManager {
     load(blob: Storage.StorageBlob): void;
     save(blob: Storage.StorageBlob): void;
     del(blob: Storage.StorageBlob): void;
+    ls(blob: Storage.StorageBlob): void;
 }

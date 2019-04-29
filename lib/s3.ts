@@ -23,6 +23,14 @@ class S3Request implements Storage.BlobRequest
     this.err = null;
   }
 
+  continuationToken(): string
+  {
+    if (this.data && this.data.NextContinuationToken)
+      return this.data.NextContinuationToken;
+
+    return undefined;
+  }
+
   result(): number
   {
     if (this.data == null && this.err == null)
@@ -43,6 +51,17 @@ class S3Request implements Storage.BlobRequest
     if (this.err || this.res == null || this.data == null || this.data.Body == null)
       return undefined;
     return this.data.Body.toString('utf-8');
+  }
+
+  asArray(): string[]
+  {
+    let a: string[] = [];
+
+    if (this.data && Array.isArray(this.data.Contents))
+      for (let i: number = 0; i < this.data.Contents.length; i++)
+        a.push(this.data.Contents[i].Key ? this.data.Contents[i].Key : '');
+
+    return a;
   }
 
   asError(): string
@@ -132,6 +151,8 @@ export class S3StorageManager extends Storage.StorageManager
 
     let trace = new Log.AsyncTimer('S3: save');
     let params: any = { Bucket: this.blobBucket(blob), Key: blob.id };
+    if (blob.bCompress)
+      params['ContentEncoding'] = 'gzip';
     if (blob.asFile())
       params.FilePath = blob.asFile();
     else
@@ -187,6 +208,42 @@ export class S3StorageManager extends Storage.StorageManager
 
         trace.log();
         Log.event(`S3: del done`);
+      });
+  }
+
+  ls(blob: Storage.StorageBlob): void
+  {
+    if (blob.id == '')
+    {
+      Log.error('S3: blob ls called with empty key');
+      return;
+    }
+    let id: string = `ls+${blob.id}+${this.count++}`;
+
+    Log.event(`S3: ls start`);
+
+    let trace = new Log.AsyncTimer('S3: del');
+    let params: any = { Bucket: this.blobBucket(blob) };
+    if (blob.continuationToken())
+      params.ContinuationToken = blob.continuationToken();
+    let rq = new S3Request(blob);
+    this.lsBlobIndex[id] = rq;
+    blob.setListing();
+    rq.req = this.s3.listObjectsV2(params, (err: any, data: any) => {
+        if (err)
+          rq.err = err;
+        else
+          rq.data = data;
+        rq.res = this;
+
+        blob.setListed();
+        blob.endList(rq);
+        this.emit('ls', blob);
+
+        delete this.lsBlobIndex[id];
+
+        trace.log();
+        Log.event(`S3: ls done`);
       });
   }
 }
