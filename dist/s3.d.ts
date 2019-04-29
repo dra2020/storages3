@@ -1,5 +1,5 @@
 import * as Storage from '@terrencecrowley/storage';
-export declare class S3StorageManager extends Storage.StorageManager {
+export declare class StorageManager extends Storage.StorageManager {
     s3: any;
     count: number;
     constructor(bucketMap: Storage.BucketMap);

@@ -173,7 +173,7 @@ class S3Request {
         return undefined;
     }
 }
-class S3StorageManager extends Storage.StorageManager {
+class StorageManager extends Storage.StorageManager {
     constructor(bucketMap) {
         super(bucketMap);
         if (Context.xstring('aws_access_key_id') === undefined || Context.xstring('aws_secret_access_key') === undefined) {
@@ -306,7 +306,7 @@ class S3StorageManager extends Storage.StorageManager {
         });
     }
 }
-exports.S3StorageManager = S3StorageManager;
+exports.StorageManager = StorageManager;
 
 
 /***/ }),

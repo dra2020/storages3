@@ -72,7 +72,7 @@ class S3Request implements Storage.BlobRequest
     }
   }
 
-export class S3StorageManager extends Storage.StorageManager
+export class StorageManager extends Storage.StorageManager
 {
   s3: any;
   count: number;
