@@ -1,6 +1,6 @@
 {
   "name": "@terrencecrowley/storages3",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Implementation of storage abstraction against AWS S3.",
   "main": "dist/storages3.js",
   "types": "./dist/all.d.ts",

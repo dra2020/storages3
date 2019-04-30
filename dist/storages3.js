@@ -160,6 +160,11 @@ class S3Request {
             return undefined;
         return this.data.Body.toString('utf-8');
     }
+    asBuffer() {
+        if (this.err || this.res == null || this.data == null || this.data.Body == null)
+            return undefined;
+        return this.data.Body;
+    }
     asArray() {
         let a = [];
         if (this.data && Array.isArray(this.data.Contents))
@@ -186,12 +191,9 @@ class StorageManager extends Storage.StorageManager {
         this.count = 0;
     }
     blobBucket(blob) {
-        let s = this.bucketMap[blob.bucketName];
-        if (s === undefined) {
-            Log.error('S3: unknown bucket, exiting.');
-            Log.dump();
-            process.exit(1);
-        }
+        let s = blob.bucketName;
+        while (this.bucketMap[s] !== undefined)
+            s = this.bucketMap[s];
         return s;
     }
     load(blob) {
@@ -200,8 +202,8 @@ class StorageManager extends Storage.StorageManager {
             return;
         }
         let id = `load+${blob.id}+${this.count++}`;
-        Log.event('S3: load start');
-        let trace = new Log.AsyncTimer('S3: load');
+        Log.event('S3: load start', 1);
+        let trace = new Log.AsyncTimer('S3: load', 1);
         let params = { Bucket: this.blobBucket(blob), Key: blob.id };
         let rq = new S3Request(blob);
         this.loadBlobIndex[id] = rq;
@@ -216,7 +218,7 @@ class StorageManager extends Storage.StorageManager {
             blob.endLoad(rq);
             this.emit('load', blob);
             delete this.loadBlobIndex[id];
-            Log.event('S3: load end');
+            Log.event('S3: load end', 1);
             trace.log();
         });
     }
@@ -226,15 +228,17 @@ class StorageManager extends Storage.StorageManager {
             return;
         }
         let id = `save+${blob.id}+${this.count++}`;
-        Log.event('S3: save start');
-        let trace = new Log.AsyncTimer('S3: save');
+        Log.event('S3: save start', 1);
+        let trace = new Log.AsyncTimer('S3: save', 1);
         let params = { Bucket: this.blobBucket(blob), Key: blob.id };
         if (blob.bCompress)
             params['ContentEncoding'] = 'gzip';
         if (blob.asFile())
             params.FilePath = blob.asFile();
-        else
-            params.Body = blob.asString();
+        else {
+            let b = blob.asBuffer();
+            params.Body = b ? b : blob.asString();
+        }
         let rq = new S3Request(blob);
         this.saveBlobIndex[id] = rq;
         blob.setSaving();
@@ -248,7 +252,7 @@ class StorageManager extends Storage.StorageManager {
             blob.endSave(rq);
             this.emit('save', blob);
             delete this.saveBlobIndex[id];
-            Log.event('S3: save done');
+            Log.event('S3: save done', 1);
             trace.log();
         });
     }
@@ -258,8 +262,8 @@ class StorageManager extends Storage.StorageManager {
             return;
         }
         let id = `delete+${blob.id}+${this.count++}`;
-        Log.event(`S3: del start`);
-        let trace = new Log.AsyncTimer('S3: del');
+        Log.event(`S3: del start`, 1);
+        let trace = new Log.AsyncTimer('S3: del', 1);
         let params = { Bucket: this.blobBucket(blob), Key: blob.id };
         let rq = new S3Request(blob);
         this.delBlobIndex[id] = rq;
@@ -274,18 +278,19 @@ class StorageManager extends Storage.StorageManager {
             this.emit('del', blob);
             delete this.delBlobIndex[id];
             trace.log();
-            Log.event(`S3: del done`);
+            Log.event(`S3: del done`, 1);
         });
     }
     ls(blob, continuationToken) {
-        if (blob.id == '') {
-            Log.error('S3: blob ls called with empty key');
+        let b = this.blobBucket(blob);
+        if (b == '') {
+            Log.error('S3: blob ls called with empty bucket');
             return;
         }
-        let id = `ls+${blob.id}+${this.count++}`;
-        Log.event(`S3: ls start`);
-        let trace = new Log.AsyncTimer('S3: ls');
-        let params = { Bucket: this.blobBucket(blob) };
+        let id = `ls+${b}+${this.count++}`;
+        Log.event(`S3: ls start`, 1);
+        let trace = new Log.AsyncTimer('S3: ls', 1);
+        let params = { Bucket: b };
         if (continuationToken)
             params.ContinuationToken = continuationToken;
         let rq = new S3Request(blob);
@@ -302,7 +307,7 @@ class StorageManager extends Storage.StorageManager {
             this.emit('ls', blob);
             delete this.lsBlobIndex[id];
             trace.log();
-            Log.event(`S3: ls done`);
+            Log.event(`S3: ls done`, 1);
         });
     }
 }
