@@ -4,7 +4,15 @@ import * as AWS from 'aws-sdk';
 // Shared libraries
 import * as Context from '@terrencecrowley/context';
 import * as Storage from '@terrencecrowley/storage';
-import * as Log from '@terrencecrowley/log';
+import * as LogAbstract from '@terrencecrowley/logabstract';
+import * as FSM from '@terrencecrowley/fsm';
+
+export interface StorageS3Environment
+{
+  context: Context.IContext;
+  log: LogAbstract.ILog;
+  fsmManager: FSM.FsmManager;
+}
 
 class S3Request implements Storage.BlobRequest
 {
@@ -84,14 +92,15 @@ export class StorageManager extends Storage.StorageManager
   s3: any;
   count: number;
 
-  constructor(bucketMap?: Storage.BucketMap)
+  constructor(env: StorageS3Environment, bucketMap?: Storage.BucketMap)
   {
-    super(bucketMap);
+    super(env, bucketMap);
 
-    if (Context.xstring('aws_access_key_id') === undefined || Context.xstring('aws_secret_access_key') === undefined)
+    if (this.env.context.xstring('aws_access_key_id') === undefined
+        || this.env.context.xstring('aws_secret_access_key') === undefined)
     {
-      Log.error('S3: not configured: exiting');
-      Log.dump();
+      this.env.log.error('S3: not configured: exiting');
+      this.env.log.dump();
       process.exit(1);
     }
 
@@ -99,6 +108,8 @@ export class StorageManager extends Storage.StorageManager
     this.s3 = new AWS.S3({apiVersion: '2006-03-01'});
     this.count = 0;
   }
+
+  get env(): StorageS3Environment { return this._env as StorageS3Environment; }
 
   blobBucket(blob: Storage.StorageBlob): string
   {
@@ -112,13 +123,13 @@ export class StorageManager extends Storage.StorageManager
   {
     if (blob.id == '')
     {
-      Log.error('S3: blob load called with empty key');
+      this.env.log.error('S3: blob load called with empty key');
       return;
     }
     let id: string = `load+${blob.id}+${this.count++}`;
 
-    Log.event('S3: load start', 1);
-    let trace = new Log.AsyncTimer('S3: load', 1);
+    this.env.log.event('S3: load start', 1);
+    let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: load', 1);
     let params = { Bucket: this.blobBucket(blob), Key: blob.id };
     let rq = new S3Request(blob);
     this.loadBlobIndex[id] = rq;
@@ -136,7 +147,7 @@ export class StorageManager extends Storage.StorageManager
 
         delete this.loadBlobIndex[id];
 
-        Log.event('S3: load end', 1);
+        this.env.log.event('S3: load end', 1);
         trace.log();
       });
   }
@@ -145,14 +156,14 @@ export class StorageManager extends Storage.StorageManager
   {
     if (blob.id == '')
     {
-      Log.error('S3: blob save called with empty key');
+      this.env.log.error('S3: blob save called with empty key');
       return;
     }
     let id: string = `save+${blob.id}+${this.count++}`;
 
-    Log.event('S3: save start', 1);
+    this.env.log.event('S3: save start', 1);
 
-    let trace = new Log.AsyncTimer('S3: save', 1);
+    let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: save', 1);
     let params: any = { Bucket: this.blobBucket(blob), Key: blob.id };
     if (blob.bCompress)
       params['ContentEncoding'] = 'gzip';
@@ -179,7 +190,7 @@ export class StorageManager extends Storage.StorageManager
 
         delete this.saveBlobIndex[id];
 
-        Log.event('S3: save done', 1);
+        this.env.log.event('S3: save done', 1);
         trace.log();
       });
   }
@@ -188,14 +199,14 @@ export class StorageManager extends Storage.StorageManager
   {
     if (blob.id == '')
     {
-      Log.error('S3: blob delete called with empty key');
+      this.env.log.error('S3: blob delete called with empty key');
       return;
     }
     let id: string = `delete+${blob.id}+${this.count++}`;
 
-    Log.event(`S3: del start`, 1);
+    this.env.log.event(`S3: del start`, 1);
 
-    let trace = new Log.AsyncTimer('S3: del', 1);
+    let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: del', 1);
     let params = { Bucket: this.blobBucket(blob), Key: blob.id };
     let rq = new S3Request(blob);
     this.delBlobIndex[id] = rq;
@@ -213,7 +224,7 @@ export class StorageManager extends Storage.StorageManager
         delete this.delBlobIndex[id];
 
         trace.log();
-        Log.event(`S3: del done`, 1);
+        this.env.log.event(`S3: del done`, 1);
       });
   }
 
@@ -222,14 +233,14 @@ export class StorageManager extends Storage.StorageManager
     let b = this.blobBucket(blob);
     if (b == '')
     {
-      Log.error('S3: blob ls called with empty bucket');
+      this.env.log.error('S3: blob ls called with empty bucket');
       return;
     }
     let id: string = `ls+${b}+${this.count++}`;
 
-    Log.event(`S3: ls start`, 1);
+    this.env.log.event(`S3: ls start`, 1);
 
-    let trace = new Log.AsyncTimer('S3: ls', 1);
+    let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: ls', 1);
     let params: any = { Bucket: b };
     if (continuationToken)
       params.ContinuationToken = continuationToken;
@@ -250,7 +261,7 @@ export class StorageManager extends Storage.StorageManager
         delete this.lsBlobIndex[id];
 
         trace.log();
-        Log.event(`S3: ls done`, 1);
+        this.env.log.event(`S3: ls done`, 1);
       });
   }
 }
