@@ -1,3 +1,7 @@
+// Node libraries
+import * as fs from 'fs';
+import * as stream from 'stream';
+
 // Public libraries
 import * as AWS from 'aws-sdk';
 
@@ -167,16 +171,40 @@ export class StorageManager extends Storage.StorageManager
     let params: any = { Bucket: this.blobBucket(blob), Key: blob.id };
     if (blob.bCompress)
       params['ContentEncoding'] = 'gzip';
-    if (blob.asFile())
-      params.FilePath = blob.asFile();
+    let rq = new S3Request(blob);
+    this.saveBlobIndex[id] = rq;
+    blob.setSaving();
+
+    // Get contents
+    let path: string = blob.asFile();
+    let blobStream: stream.Readable = null;
+    if (path)
+    {
+      try
+      {
+        blobStream = fs.createReadStream(path);
+        params.Body = blobStream;
+      }
+      catch (err)
+      {
+        rq.err = err;
+        process.nextTick(() => {
+            blob.setSaved(rq.result());
+            blob.endSave(rq);
+            this.emit('save', blob);
+            delete this.saveBlobIndex[id];
+            this.env.log.error('S3: failed to open blob path file');
+            trace.log();
+          });
+        return;
+      }
+    }
     else
     {
       let b = blob.asBuffer();
       params.Body = b ? b : blob.asString();
     }
-    let rq = new S3Request(blob);
-    this.saveBlobIndex[id] = rq;
-    blob.setSaving();
+
     rq.req = this.s3.putObject(params, (err: any, data: any) => {
         if (err)
           rq.err = err;
@@ -192,6 +220,9 @@ export class StorageManager extends Storage.StorageManager
 
         this.env.log.event('S3: save done', 1);
         trace.log();
+
+        if (blobStream)
+          blobStream.destroy();
       });
   }
 
