@@ -49,7 +49,7 @@ class S3Request implements Storage.BlobRequest
       return Storage.EPending;
     else if (this.err != null)
     {
-      if (this.res && this.res.httpResponse && this.res.httpResponse.statusCode == 404)
+      if (this.err.statusCode && this.err.statusCode == 404)
         return Storage.ENotFound;
       else
         return Storage.EFail;
