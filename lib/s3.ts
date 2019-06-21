@@ -83,6 +83,17 @@ class S3Request implements Storage.BlobRequest
     return a;
   }
 
+  asProps(): Storage.BlobProperties[]
+  {
+    let a: Storage.BlobProperties[] = [];
+
+    if (this.data && Array.isArray(this.data.Contents))
+      for (let i: number = 0; i < this.data.Contents.length; i++)
+        a.push({ ContentLength: this.data.Contents[i].Size !== undefined ? this.data.Contents[i].Size : 0 });
+
+    return a;
+  }
+
   asError(): string
   {
       if (this.err)
