@@ -1,7 +1,7 @@
-import * as Context from '@terrencecrowley/context';
-import * as Storage from '@terrencecrowley/storage';
-import * as LogAbstract from '@terrencecrowley/logabstract';
-import * as FSM from '@terrencecrowley/fsm';
+import * as Context from '@dra2020/context';
+import * as Storage from '@dra2020/storage';
+import * as LogAbstract from '@dra2020/logabstract';
+import * as FSM from '@dra2020/fsm';
 export interface StorageS3Environment {
     context: Context.IContext;
     log: LogAbstract.ILog;
