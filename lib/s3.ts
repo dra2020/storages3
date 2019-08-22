@@ -186,30 +186,35 @@ export class StorageManager extends Storage.StorageManager
     this.saveBlobIndex[id] = rq;
     blob.setSaving();
 
-    // Get contents
-    let path: string = blob.asFile();
-    let blobStream: stream.Readable = null;
-    if (path)
+    // Get contents, try in order: 1) stream, 2) local file, 3) buffer, 4) utf8 string
+    let blobStream = blob.asStream();
+    if (blobStream == null)
     {
-      try
+      let path: string = blob.asFile();
+      if (path)
       {
-        blobStream = fs.createReadStream(path);
-        params.Body = blobStream;
-      }
-      catch (err)
-      {
-        rq.err = err;
-        process.nextTick(() => {
-            blob.setSaved(rq.result());
-            blob.endSave(rq);
-            this.emit('save', blob);
-            delete this.saveBlobIndex[id];
-            this.env.log.error('S3: failed to open blob path file');
-            trace.log();
-          });
-        return;
+        try
+        {
+          blobStream = fs.createReadStream(path);
+        }
+        catch (err)
+        {
+          rq.err = err;
+          process.nextTick(() => {
+              blob.setSaved(rq.result());
+              blob.endSave(rq);
+              this.emit('save', blob);
+              delete this.saveBlobIndex[id];
+              this.env.log.error('S3: failed to open blob path file');
+              trace.log();
+            });
+          return;
+        }
       }
     }
+
+    if (blobStream != null)
+      params.Body = blobStream;
     else
     {
       let b = blob.asBuffer();
