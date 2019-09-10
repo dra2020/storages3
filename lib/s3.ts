@@ -1,6 +1,7 @@
 // Node libraries
 import * as fs from 'fs';
 import * as stream from 'stream';
+import * as zlib from 'zlib';
 
 // Public libraries
 import * as AWS from 'aws-sdk';
@@ -62,7 +63,12 @@ class S3Request implements Storage.BlobRequest
   {
     if (this.err || this.res == null || this.data == null || this.data.Body == null)
       return undefined;
-    return this.data.Body.toString('utf-8');
+    let body: Buffer;
+    if (this.data.ContentEncoding && this.data.ContentEncoding === 'gzip')
+      body = zlib.gunzipSync(this.data.Body);
+    else
+      body = this.data.Body;
+    return body.toString('utf-8');
   }
 
   asBuffer(): Buffer
