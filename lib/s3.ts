@@ -186,8 +186,10 @@ export class StorageManager extends Storage.StorageManager
 
     let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: save', 1);
     let params: any = { Bucket: this.blobBucket(blob), Key: blob.id };
-    if (blob.bCompress)
-      params['ContentEncoding'] = 'gzip';
+    if (blob.param('ContentEncoding'))
+      params['ContentEncoding'] = blob.param('ContentEncoding');
+    if (blob.param('ContentType'))
+      params['ContentType'] = blob.param('ContentType');
     let rq = new S3Request(blob);
     this.saveBlobIndex[id] = rq;
     blob.setSaving();
