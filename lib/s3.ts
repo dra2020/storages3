@@ -11,6 +11,7 @@ import * as Context from '@dra2020/context';
 import * as Storage from '@dra2020/storage';
 import * as LogAbstract from '@dra2020/logabstract';
 import * as FSM from '@dra2020/fsm';
+import * as J from '@dra2020/jsonstream';
 
 export interface StorageS3Environment
 {
@@ -46,7 +47,7 @@ class S3Request implements Storage.BlobRequest
 
   result(): number
   {
-    if (this.data == null && this.err == null)
+    if (this.data == null && this.blob.asLoadStream() == null && this.err == null)
       return Storage.EPending;
     else if (this.err != null)
     {
@@ -105,8 +106,41 @@ class S3Request implements Storage.BlobRequest
       if (this.err)
         return this.err.message ? this.err.message : JSON.stringify(this.err);
       return undefined;
+  }
+}
+
+const FSM_LOADING = FSM.FSM_CUSTOM1;
+
+export class FsmStreamLoader extends FSM.Fsm
+{
+  sm: StorageManager;
+  blob: Storage.StorageBlob;
+  err: any;
+  contentLength: number;
+  contentPos: number;
+
+  constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob)
+  {
+    super(env);
+    this.sm = sm;
+    this.blob = blob;
+    this.contentPos = 0;
+  }
+
+  get env(): StorageS3Environment { return this._env as StorageS3Environment; }
+
+  tick(): void
+  {
+    if (this.ready)
+    {
+      switch (this.state)
+      {
+        case FSM.FSM_STARTING:
+          break;
+      }
     }
   }
+}
 
 export class StorageManager extends Storage.StorageManager
 {
@@ -155,22 +189,38 @@ export class StorageManager extends Storage.StorageManager
     let rq = new S3Request(blob);
     this.loadBlobIndex[id] = rq;
     blob.setLoading();
-    rq.req = this.s3.getObject(params, (err: any, data: any) => {
-        if (err)
-          rq.err = err;
-        else
-          rq.data = data;
-        rq.res = this;
+    if (blob.asLoadStream())
+    {
+      let fsm = new FsmStreamLoader(this.env, this, blob);
+      rq.req = fsm;
+      new FSM.FsmOnDone(this.env, fsm, (f: FSM.Fsm) => {
+          this._finishLoad(blob, id, rq, fsm.err, undefined);
+          trace.log();
+        });
+    }
+    else
+    {
+      rq.req = this.s3.getObject(params, (err: any, data: any) => {
+          this._finishLoad(blob, id, rq, err, data);
+          trace.log();
+        });
+    }
+  }
 
-        blob.setLoaded(rq.result());
-        blob.endLoad(rq);
-        this.emit('load', blob);
+  _finishLoad(blob: Storage.StorageBlob, id: string, rq: S3Request, err: any, data: any)
+  {
+    if (err)
+      rq.err = err;
+    else
+      rq.data = data;
 
-        delete this.loadBlobIndex[id];
+    blob.setLoaded(rq.result());
+    blob.endLoad(rq);
+    this.emit('load', blob);
 
-        this.env.log.event('S3: load end', 1);
-        trace.log();
-      });
+    delete this.loadBlobIndex[id];
+
+    this.env.log.event('S3: load end', 1);
   }
 
   save(blob: Storage.StorageBlob): void
