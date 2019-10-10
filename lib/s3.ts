@@ -109,15 +109,18 @@ class S3Request implements Storage.BlobRequest
   }
 }
 
-const FSM_LOADING = FSM.FSM_CUSTOM1;
+const ChunkSize = 4000000;
 
 export class FsmStreamLoader extends FSM.Fsm
 {
   sm: StorageManager;
   blob: Storage.StorageBlob;
+  param: any;
   err: any;
   contentLength: number;
   contentPos: number;
+  readStream: stream.Transform;
+  passThrough: stream.Transform;
 
   constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob)
   {
@@ -125,6 +128,14 @@ export class FsmStreamLoader extends FSM.Fsm
     this.sm = sm;
     this.blob = blob;
     this.contentPos = 0;
+    this.param = { Bucket: sm.blobBucket(blob), Key: blob.id };
+
+    // We use passthrough stream because we want to make the load stream available
+    // immediately but we don't actually know whether we are going to have to pipe
+    // through gunzip or not until we get the first ContentEncoding header back.
+    this.readStream = new Storage.MultiBufferPassThrough();
+    this.passThrough = new Storage.MultiBufferPassThrough();
+    this.blob.setLoadStream(this.passThrough);
   }
 
   get env(): StorageS3Environment { return this._env as StorageS3Environment; }
@@ -133,9 +144,66 @@ export class FsmStreamLoader extends FSM.Fsm
   {
     if (this.ready)
     {
+      // Figure out next chunk
+      if (this.contentLength === undefined)
+        this.param.Range = `bytes=0-${ChunkSize-1}`;
+      else
+        this.param.Range = `bytes=${this.contentPos}-${Math.min(this.contentPos+ChunkSize-1, this.contentLength-1)}`;
+
       switch (this.state)
       {
+
         case FSM.FSM_STARTING:
+          this.sm.s3.getObject(this.param, (err: any, data: any) => {
+              if (err == null)
+              {
+                // On first chunk, figure out if we need to pipe through gunzip
+                if (this.contentLength === undefined)
+                {
+                  if (data.ContentEncoding && data.ContentEncoding === 'gzip')
+                  {
+                    let unzip = zlib.createGunzip({});
+                    unzip.on('end', () => this.setState(FSM.FSM_DONE) );
+                    unzip.on('error', () => this.setState(FSM.FSM_ERROR) );
+                    this.readStream.pipe(unzip).pipe(this.passThrough);
+                  }
+                  else
+                  {
+                    this.readStream.on('end', () => this.setState(FSM.FSM_DONE) );
+                    this.readStream.on('error', () => this.setState(FSM.FSM_ERROR) );
+                    this.readStream.pipe(this.passThrough);
+                  }
+                }
+
+                // Handle this data
+                if (data.Body)
+                  this.readStream.write(data.Body);
+
+                // Update content range and content length for next time through, or noticing finish
+                if (data.ContentRange)
+                {
+                  let re = /bytes (\d+)-(\d+)\/(\d+)/
+                  let s: string = data.ContentRange;  // "bytes start-end/total"
+                  let matched = re.exec(s);
+                  if (matched && matched.length === 4)
+                  {
+                    this.contentPos = Number(matched[2]) + 1;
+                    this.contentLength = Number(matched[3]);
+                  }
+                }
+              }
+
+              // Error or done reading
+              if (err || this.contentPos === this.contentLength)
+              {
+                this.err = err;
+                this.readStream.end();
+                if (err)
+                  this.setState(FSM.FSM_ERROR);
+              }
+              else
+                this.setState(FSM.FSM_STARTING);
+            });
           break;
       }
     }
@@ -189,7 +257,7 @@ export class StorageManager extends Storage.StorageManager
     let rq = new S3Request(blob);
     this.loadBlobIndex[id] = rq;
     blob.setLoading();
-    if (blob.asLoadStream())
+    if (blob.param('ContentDisposition') === 'stream')
     {
       let fsm = new FsmStreamLoader(this.env, this, blob);
       rq.req = fsm;

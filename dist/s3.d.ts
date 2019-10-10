@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import * as stream from 'stream';
 import * as Context from '@dra2020/context';
 import * as Storage from '@dra2020/storage';
 import * as LogAbstract from '@dra2020/logabstract';
@@ -26,9 +27,12 @@ declare class S3Request implements Storage.BlobRequest {
 export declare class FsmStreamLoader extends FSM.Fsm {
     sm: StorageManager;
     blob: Storage.StorageBlob;
+    param: any;
     err: any;
     contentLength: number;
     contentPos: number;
+    readStream: stream.Transform;
+    passThrough: stream.Transform;
     constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob);
     readonly env: StorageS3Environment;
     tick(): void;
