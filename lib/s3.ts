@@ -277,6 +277,7 @@ export class StorageManager extends Storage.StorageManager
 
   _finishLoad(blob: Storage.StorageBlob, id: string, rq: S3Request, err: any, data: any)
   {
+    rq.res = this;
     if (err)
       rq.err = err;
     else
