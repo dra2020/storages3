@@ -315,7 +315,7 @@ export class StorageManager extends Storage.StorageManager
 
     // Get contents, try in order: 1) stream, 2) local file, 3) buffer, 4) utf8 string
     let blobStream = blob.asStream();
-    if (blobStream == null)
+    if (blobStream == null && blob.param('ContentEncoding') !== 'gzip') // For gzip, need a buffer to compute length for save
     {
       let path: string = blob.asFile();
       if (path)

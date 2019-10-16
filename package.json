@@ -1,6 +1,6 @@
 {
   "name": "@dra2020/storages3",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Implementation of storage abstraction against AWS S3.",
   "main": "dist/storages3.js",
   "types": "./dist/all.d.ts",
