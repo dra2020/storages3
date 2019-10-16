@@ -119,8 +119,8 @@ export class FsmStreamLoader extends FSM.Fsm
   err: any;
   contentLength: number;
   contentPos: number;
-  readStream: stream.Transform;
-  passThrough: stream.Transform;
+  readStream: Storage.MultiBufferPassThrough;
+  passThrough: Storage.MultiBufferPassThrough;
 
   constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob)
   {
@@ -163,14 +163,14 @@ export class FsmStreamLoader extends FSM.Fsm
                   if (data.ContentEncoding && data.ContentEncoding === 'gzip')
                   {
                     let unzip = zlib.createGunzip({});
-                    unzip.on('end', () => this.setState(FSM.FSM_DONE) );
-                    unzip.on('error', () => this.setState(FSM.FSM_ERROR) );
+                    unzip.on('end', () => { this.passThrough._done(); this.setState(FSM.FSM_DONE); } );
+                    unzip.on('error', () => { this.passThrough._done(); this.setState(FSM.FSM_ERROR); } );
                     this.readStream.pipe(unzip).pipe(this.passThrough);
                   }
                   else
                   {
-                    this.readStream.on('end', () => this.setState(FSM.FSM_DONE) );
-                    this.readStream.on('error', () => this.setState(FSM.FSM_ERROR) );
+                    this.readStream.on('end', () => { this.passThrough._done(); this.setState(FSM.FSM_DONE); } );
+                    this.readStream.on('error', () => { this.passThrough._done(); this.setState(FSM.FSM_ERROR); } );
                     this.readStream.pipe(this.passThrough);
                   }
                 }
@@ -197,7 +197,7 @@ export class FsmStreamLoader extends FSM.Fsm
               if (err || this.contentPos === this.contentLength)
               {
                 this.err = err;
-                this.readStream.end();
+                this.readStream._done();
                 if (err)
                   this.setState(FSM.FSM_ERROR);
               }
