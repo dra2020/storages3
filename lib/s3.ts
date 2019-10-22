@@ -199,7 +199,10 @@ export class FsmStreamLoader extends FSM.Fsm
                 this.err = err;
                 this.readStream._done();
                 if (err)
+                {
+                  this.passThrough._done();
                   this.setState(FSM.FSM_ERROR);
+                }
               }
               else
                 this.setState(FSM.FSM_STARTING);
