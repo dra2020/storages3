@@ -96,7 +96,15 @@ class S3Request implements Storage.BlobRequest
 
     if (this.data && Array.isArray(this.data.Contents))
       for (let i: number = 0; i < this.data.Contents.length; i++)
-        a.push({ ContentLength: this.data.Contents[i].Size !== undefined ? this.data.Contents[i].Size : 0 });
+      {
+        let data: any = this.data.Contents[i];
+        let props: Storage.BlobProperties = {};
+        props.ContentLength = (data.Size !== undefined) ? data.Size : 0;
+        props.Key = data.Key;
+        props.ETag = data.ETag;
+        props.LastModified = data.LastModified;
+        a.push(props);
+      }
 
     return a;
   }
