@@ -221,6 +221,16 @@ export class FsmStreamLoader extends FSM.Fsm
   }
 }
 
+export class FsmTransferUrl extends Storage.FsmTransferUrl
+{
+  storageManager: StorageManager;
+
+  constructor(env: StorageS3Environment, bucket: string, op: Storage.TransferUrlOp)
+  {
+    super(env, bucket, op);
+  }
+}
+
 export class StorageManager extends Storage.StorageManager
 {
   s3: any;
@@ -245,12 +255,16 @@ export class StorageManager extends Storage.StorageManager
 
   get env(): StorageS3Environment { return this._env as StorageS3Environment; }
 
-  blobBucket(blob: Storage.StorageBlob): string
+  lookupBucket(s: string): string
   {
-    let s: string = blob.bucketName;
     while (this.bucketMap[s] !== undefined)
       s = this.bucketMap[s];
     return s;
+  }
+
+  blobBucket(blob: Storage.StorageBlob): string
+  {
+    return this.lookupBucket(blob.bucketName);
   }
 
   load(blob: Storage.StorageBlob): void
@@ -448,5 +462,44 @@ export class StorageManager extends Storage.StorageManager
         trace.log();
         this.env.log.event(`S3: ls done`, 1);
       });
+  }
+
+  createTransferUrl(op: Storage.TransferUrlOp): Storage.FsmTransferUrl
+  {
+    let fsm = new FsmTransferUrl(this.env, this.lookupBucket('transfers'), op);
+    //if (op === 'putObject')
+    if (fsm === null)
+    {
+      let params: any = { Bucket: fsm.bucket, Fields: { key: fsm.key } };
+      this.s3.createPresignedPost(params, (err: any, url: string) => {
+          if (err)
+          {
+            this.env.log.error(`S3: createPresignedPost failed: ${err}`);
+            fsm.setState(FSM.FSM_ERROR);
+          }
+          else
+          {
+            fsm.url = url;
+            fsm.setState(FSM.FSM_DONE);
+          }
+        });
+    }
+    else
+    {
+      let params: any = { Bucket: fsm.bucket, Key: fsm.key, ContentType: 'text/plain; charset=UTF-8' };
+      this.s3.getSignedUrl(op, params, (err: any, url: string) => {
+          if (err)
+          {
+            this.env.log.error(`S3: getSignedUrl failed: ${err}`);
+            fsm.setState(FSM.FSM_ERROR);
+          }
+          else
+          {
+            fsm.url = url;
+            fsm.setState(FSM.FSM_DONE);
+          }
+        });
+    }
+    return fsm;
   }
 }
