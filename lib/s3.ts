@@ -485,7 +485,8 @@ export class StorageManager extends Storage.StorageManager
     }
     else
     {
-      let params: any = { Bucket: fsm.bucket, Key: fsm.key, ContentType: 'text/plain; charset=UTF-8' };
+      let params: any = { Bucket: fsm.bucket, Key: fsm.key };
+      if (op === 'putObject') params.ContentType = 'text/plain; charset=UTF-8';
       this.s3.getSignedUrl(op, params, (err: any, url: string) => {
           if (err)
           {
