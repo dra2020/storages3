@@ -333,6 +333,8 @@ export class StorageManager extends Storage.StorageManager
       params['ContentEncoding'] = blob.param('ContentEncoding');
     if (blob.param('ContentType'))
       params['ContentType'] = blob.param('ContentType');
+    if (blob.param('CacheControl'))
+      params['CacheControl'] = blob.param('CacheControl');
     let rq = new S3Request(blob);
     this.saveBlobIndex[id] = rq;
     blob.setSaving();
