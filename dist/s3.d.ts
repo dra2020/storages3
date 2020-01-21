@@ -20,6 +20,7 @@ declare class S3Request implements Storage.BlobRequest {
     asString(): string;
     asBuffer(): Buffer;
     asArray(): string[];
+    _dataToProps(data: any): Storage.BlobProperties;
     asProps(): Storage.BlobProperties[];
     asError(): string;
 }
@@ -49,6 +50,7 @@ export declare class StorageManager extends Storage.StorageManager {
     blobBucket(blob: Storage.StorageBlob): string;
     load(blob: Storage.StorageBlob): void;
     _finishLoad(blob: Storage.StorageBlob, id: string, rq: S3Request, err: any, data: any): void;
+    head(blob: Storage.StorageBlob): void;
     save(blob: Storage.StorageBlob): void;
     del(blob: Storage.StorageBlob): void;
     ls(blob: Storage.StorageBlob, continuationToken?: string): void;

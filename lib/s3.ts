@@ -89,21 +89,28 @@ class S3Request implements Storage.BlobRequest
     return a;
   }
 
+  _dataToProps(data: any): Storage.BlobProperties
+  {
+    let props: Storage.BlobProperties = {};
+    props.ContentLength = (data.Size !== undefined) ? data.Size : 0;
+    props.Key = data.Key;
+    props.ETag = data.ETag;
+    props.LastModified = data.LastModified;
+    props.ContentEncoding = data.ContentEncoding;
+    return props;
+  }
+
   asProps(): Storage.BlobProperties[]
   {
     let a: Storage.BlobProperties[] = [];
 
     if (this.data && Array.isArray(this.data.Contents))
+    {
       for (let i: number = 0; i < this.data.Contents.length; i++)
-      {
-        let data: any = this.data.Contents[i];
-        let props: Storage.BlobProperties = {};
-        props.ContentLength = (data.Size !== undefined) ? data.Size : 0;
-        props.Key = data.Key;
-        props.ETag = data.ETag;
-        props.LastModified = data.LastModified;
-        a.push(props);
-      }
+        a.push(this._dataToProps(this.data.Contents[i]));
+    }
+    else
+      a.push(this._dataToProps(this.data));
 
     return a;
   }
@@ -314,6 +321,39 @@ export class StorageManager extends Storage.StorageManager
     delete this.loadBlobIndex[id];
 
     this.env.log.event('S3: load end', 1);
+  }
+
+  head(blob: Storage.StorageBlob): void
+  {
+    if (blob.id == '')
+    {
+      this.env.log.error('S3: blob head called with empty key');
+      return;
+    }
+    let id: string = `head+${blob.id}+${this.count++}`;
+
+    this.env.log.event('S3: head start', 1);
+    let trace = new LogAbstract.AsyncTimer(this.env.log, 'S3: head', 1);
+    let params = { Bucket: this.blobBucket(blob), Key: blob.id };
+    let rq = new S3Request(blob);
+    this.headBlobIndex[id] = rq;
+    blob.setLoading();
+    rq.req = this.s3.headObject(params, (err: any, data: any) => {
+        rq.res = this;
+        if (err)
+          rq.err = err;
+        else
+          rq.data = data;
+
+        blob.setLoaded(rq.result());
+        blob.endHead(rq);
+        this.emit('head', blob);
+
+        delete this.headBlobIndex[id];
+
+        this.env.log.event('S3: head end', 1);
+        trace.log();
+      });
   }
 
   save(blob: Storage.StorageBlob): void
