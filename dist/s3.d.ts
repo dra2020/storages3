@@ -34,7 +34,7 @@ export declare class FsmStreamLoader extends FSM.Fsm {
     readStream: Storage.MultiBufferPassThrough;
     passThrough: Storage.MultiBufferPassThrough;
     constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob);
-    readonly env: StorageS3Environment;
+    get env(): StorageS3Environment;
     tick(): void;
 }
 export declare class FsmTransferUrl extends Storage.FsmTransferUrl {
@@ -45,7 +45,7 @@ export declare class StorageManager extends Storage.StorageManager {
     s3: any;
     count: number;
     constructor(env: StorageS3Environment, bucketMap?: Storage.BucketMap);
-    readonly env: StorageS3Environment;
+    get env(): StorageS3Environment;
     lookupBucket(s: string): string;
     blobBucket(blob: Storage.StorageBlob): string;
     load(blob: Storage.StorageBlob): void;
