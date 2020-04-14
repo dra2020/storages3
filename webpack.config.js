@@ -1,6 +1,13 @@
 var path = require('path');
 var fs = require('fs');
 var externalModules = {};
+fs.readdirSync('node_modules')
+    .filter(function(x) {
+       return ['.bin'].indexOf(x) === -1;
+  })
+  .forEach(function(mod) {
+    externalModules[mod] = 'commonjs ' + mod;
+});
 fs.readdirSync('node_modules/@dra2020')
   .forEach((mod) => {
     mod = '@dra2020/' + mod;

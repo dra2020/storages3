@@ -12,11 +12,12 @@ import * as Storage from '@dra2020/storage';
 import * as LogAbstract from '@dra2020/logabstract';
 import * as FSM from '@dra2020/fsm';
 
-export interface StorageS3Environment
+export interface Environment
 {
   context: Context.IContext;
   log: LogAbstract.ILog;
   fsmManager: FSM.FsmManager;
+  storageManager: Storage.StorageManager;
 }
 
 class S3Request implements Storage.BlobRequest
@@ -136,7 +137,7 @@ export class FsmStreamLoader extends FSM.Fsm
   readStream: Storage.MultiBufferPassThrough;
   passThrough: Storage.MultiBufferPassThrough;
 
-  constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob)
+  constructor(env: Environment, sm: StorageManager, blob: Storage.StorageBlob)
   {
     super(env);
     this.sm = sm;
@@ -152,7 +153,7 @@ export class FsmStreamLoader extends FSM.Fsm
     this.blob.setLoadStream(this.passThrough);
   }
 
-  get env(): StorageS3Environment { return this._env as StorageS3Environment; }
+  get env(): Environment { return this._env as Environment; }
 
   tick(): void
   {
@@ -231,7 +232,7 @@ export class FsmTransferUrl extends Storage.FsmTransferUrl
 {
   storageManager: StorageManager;
 
-  constructor(env: StorageS3Environment, bucket: string, op: Storage.TransferUrlOp)
+  constructor(env: Environment, bucket: string, op: Storage.TransferUrlOp)
   {
     super(env, bucket, op);
   }
@@ -242,7 +243,7 @@ export class StorageManager extends Storage.StorageManager
   s3: any;
   count: number;
 
-  constructor(env: StorageS3Environment, bucketMap?: Storage.BucketMap)
+  constructor(env: Environment, bucketMap?: Storage.BucketMap)
   {
     super(env, bucketMap);
 
@@ -259,7 +260,7 @@ export class StorageManager extends Storage.StorageManager
     this.count = 0;
   }
 
-  get env(): StorageS3Environment { return this._env as StorageS3Environment; }
+  get env(): Environment { return this._env as Environment; }
 
   lookupBucket(s: string): string
   {

@@ -3,10 +3,11 @@ import * as Context from '@dra2020/context';
 import * as Storage from '@dra2020/storage';
 import * as LogAbstract from '@dra2020/logabstract';
 import * as FSM from '@dra2020/fsm';
-export interface StorageS3Environment {
+export interface Environment {
     context: Context.IContext;
     log: LogAbstract.ILog;
     fsmManager: FSM.FsmManager;
+    storageManager: Storage.StorageManager;
 }
 declare class S3Request implements Storage.BlobRequest {
     blob: Storage.StorageBlob;
@@ -33,19 +34,19 @@ export declare class FsmStreamLoader extends FSM.Fsm {
     contentPos: number;
     readStream: Storage.MultiBufferPassThrough;
     passThrough: Storage.MultiBufferPassThrough;
-    constructor(env: StorageS3Environment, sm: StorageManager, blob: Storage.StorageBlob);
-    get env(): StorageS3Environment;
+    constructor(env: Environment, sm: StorageManager, blob: Storage.StorageBlob);
+    get env(): Environment;
     tick(): void;
 }
 export declare class FsmTransferUrl extends Storage.FsmTransferUrl {
     storageManager: StorageManager;
-    constructor(env: StorageS3Environment, bucket: string, op: Storage.TransferUrlOp);
+    constructor(env: Environment, bucket: string, op: Storage.TransferUrlOp);
 }
 export declare class StorageManager extends Storage.StorageManager {
     s3: any;
     count: number;
-    constructor(env: StorageS3Environment, bucketMap?: Storage.BucketMap);
-    get env(): StorageS3Environment;
+    constructor(env: Environment, bucketMap?: Storage.BucketMap);
+    get env(): Environment;
     lookupBucket(s: string): string;
     blobBucket(blob: Storage.StorageBlob): string;
     load(blob: Storage.StorageBlob): void;
