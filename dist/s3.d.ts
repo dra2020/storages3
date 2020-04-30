@@ -19,6 +19,7 @@ declare class S3Request implements Storage.BlobRequest {
     continuationToken(): string;
     result(): number;
     asString(): string;
+    asUncompressedBuffer(): Buffer;
     asBuffer(): Buffer;
     asArray(): string[];
     _dataToProps(data: any): Storage.BlobProperties;

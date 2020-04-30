@@ -72,6 +72,19 @@ class S3Request implements Storage.BlobRequest
     return body.toString('utf-8');
   }
 
+  // Really probably should be reverse semantics - you need to explicitly ask for the unprocessed buffer
+  asUncompressedBuffer(): Buffer
+  {
+    if (this.err || this.res == null || this.data == null || this.data.Body == null)
+      return undefined;
+    let body: Buffer;
+    if (this.data.ContentEncoding && this.data.ContentEncoding === 'gzip')
+      body = zlib.gunzipSync(this.data.Body);
+    else
+      body = this.data.Body;
+    return body;
+  }
+
   asBuffer(): Buffer
   {
     if (this.err || this.res == null || this.data == null || this.data.Body == null)

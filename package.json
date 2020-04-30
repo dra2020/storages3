@@ -1,6 +1,6 @@
 {
   "name": "@dra2020/storages3",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Implementation of storage abstraction against AWS S3.",
   "main": "dist/storages3.js",
   "types": "./dist/all.d.ts",
@@ -37,8 +37,8 @@
     "@dra2020/fsmfile": "^1.1.2",
     "@dra2020/jsonstream": "^1.1.4",
     "@dra2020/logabstract": "^1.0.15",
-    "@dra2020/storage": "^1.5.2",
-    "@dra2020/util": "^1.0.49",
+    "@dra2020/storage": "^1.5.3",
+    "@dra2020/util": "^1.0.50",
     "aws-sdk": "^2.656.0"
   }
 }
