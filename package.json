@@ -1,6 +1,6 @@
 {
   "name": "@dra2020/storages3",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Implementation of storage abstraction against AWS S3.",
   "main": "dist/storages3.js",
   "types": "./dist/all.d.ts",
@@ -15,6 +15,10 @@
   },
   "keywords": [
     "Typescript"
+  ],
+  "files": [
+    "dist/",
+    "lib/"
   ],
   "author": "Terry Crowley",
   "license": "MIT",
