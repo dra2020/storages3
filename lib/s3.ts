@@ -245,9 +245,9 @@ export class FsmTransferUrl extends Storage.FsmTransferUrl
 {
   storageManager: StorageManager;
 
-  constructor(env: Environment, bucket: string, op: Storage.TransferUrlOp)
+  constructor(env: Environment, bucket: string, params: Storage.TransferParams)
   {
-    super(env, bucket, op);
+    super(env, bucket, params);
   }
 }
 
@@ -519,10 +519,9 @@ export class StorageManager extends Storage.StorageManager
       });
   }
 
-  createTransferUrl(op: Storage.TransferUrlOp): Storage.FsmTransferUrl
+  createTransferUrl(params: Storage.TransferParams): Storage.FsmTransferUrl
   {
-    let fsm = new FsmTransferUrl(this.env, this.lookupBucket('transfers'), op);
-    //if (op === 'putObject')
+    let fsm = new FsmTransferUrl(this.env, this.lookupBucket('transfers'), params);
     if (fsm === null)
     {
       let params: any = { Bucket: fsm.bucket, Fields: { key: fsm.key } };
@@ -541,9 +540,9 @@ export class StorageManager extends Storage.StorageManager
     }
     else
     {
-      let params: any = { Bucket: fsm.bucket, Key: fsm.key };
-      if (op === 'putObject') params.ContentType = 'text/plain; charset=UTF-8';
-      this.s3.getSignedUrl(op, params, (err: any, url: string) => {
+      let s3params: any = { Bucket: fsm.bucket, Key: fsm.key };
+      if (params.op === 'putObject') s3params.ContentType = fsm.params.contentType;
+      this.s3.getSignedUrl(params.op, s3params, (err: any, url: string) => {
           if (err)
           {
             this.env.log.error(`S3: getSignedUrl failed: ${err}`);

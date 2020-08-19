@@ -41,7 +41,7 @@ export declare class FsmStreamLoader extends FSM.Fsm {
 }
 export declare class FsmTransferUrl extends Storage.FsmTransferUrl {
     storageManager: StorageManager;
-    constructor(env: Environment, bucket: string, op: Storage.TransferUrlOp);
+    constructor(env: Environment, bucket: string, params: Storage.TransferParams);
 }
 export declare class StorageManager extends Storage.StorageManager {
     s3: any;
@@ -56,6 +56,6 @@ export declare class StorageManager extends Storage.StorageManager {
     save(blob: Storage.StorageBlob): void;
     del(blob: Storage.StorageBlob): void;
     ls(blob: Storage.StorageBlob, continuationToken?: string): void;
-    createTransferUrl(op: Storage.TransferUrlOp): Storage.FsmTransferUrl;
+    createTransferUrl(params: Storage.TransferParams): Storage.FsmTransferUrl;
 }
 export {};

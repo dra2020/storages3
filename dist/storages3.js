@@ -289,8 +289,8 @@ class FsmStreamLoader extends FSM.Fsm {
 }
 exports.FsmStreamLoader = FsmStreamLoader;
 class FsmTransferUrl extends Storage.FsmTransferUrl {
-    constructor(env, bucket, op) {
-        super(env, bucket, op);
+    constructor(env, bucket, params) {
+        super(env, bucket, params);
     }
 }
 exports.FsmTransferUrl = FsmTransferUrl;
@@ -498,9 +498,8 @@ class StorageManager extends Storage.StorageManager {
             this.env.log.event(`S3: ls done`, 1);
         });
     }
-    createTransferUrl(op) {
-        let fsm = new FsmTransferUrl(this.env, this.lookupBucket('transfers'), op);
-        //if (op === 'putObject')
+    createTransferUrl(params) {
+        let fsm = new FsmTransferUrl(this.env, this.lookupBucket('transfers'), params);
         if (fsm === null) {
             let params = { Bucket: fsm.bucket, Fields: { key: fsm.key } };
             this.s3.createPresignedPost(params, (err, url) => {
@@ -515,10 +514,10 @@ class StorageManager extends Storage.StorageManager {
             });
         }
         else {
-            let params = { Bucket: fsm.bucket, Key: fsm.key };
-            if (op === 'putObject')
-                params.ContentType = 'text/plain; charset=UTF-8';
-            this.s3.getSignedUrl(op, params, (err, url) => {
+            let s3params = { Bucket: fsm.bucket, Key: fsm.key };
+            if (params.op === 'putObject')
+                s3params.ContentType = fsm.params.contentType;
+            this.s3.getSignedUrl(params.op, s3params, (err, url) => {
                 if (err) {
                     this.env.log.error(`S3: getSignedUrl failed: ${err}`);
                     fsm.setState(FSM.FSM_ERROR);
